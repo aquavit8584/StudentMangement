@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>學生資訊管理系統</title>
+    <style>
+      table,
+      th,
+      td {
+        border: gray 2px solid;
+        border-collapse: collapse;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>學生列表</h1>
+
+    <table id="student-list" style="width: 80%">
+      <tr>
+        <th>Name</th>
+        <th>Age</th>
+        <th>Grade</th>
+        <th>Actions</th>
+      </tr>
+    </table>
+
+    <h2>新增/更新學生</h2>
+
+    <form id="add-student-form">
+      <label for="name">姓名：</label>
+      <input type="text" id="name" name="name" required />
+
+      <label for="age">年齡：</label>
+      <input type="number" id="age" name="age" required />
+
+      <label for="grade">年級：</label>
+      <input type="text" id="grade" name="grade" required />
+
+      <button type="submit">提交</button>
+    </form>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+      let editingStudentId = null; // 用於追蹤當前編輯的學生 ID
+
+      $(document).ready(function () {
+        // 取得學生列表
+        $.get("/students", function (students) {
+          const studentList = $("#student-list");
+          students.forEach(function (student) {
+            studentList.append(
+              `<tr>
+                            <td>${student.name}</td>
+                            <td>${student.age}歲</td>
+                            <td>${student.grade}年級</td>
+                            <td>
+                                <button class="edit-btn" data-id="${student._id}">編輯</button>
+                                <button class="delete-btn" data-id="${student._id}">刪除</button>
+                            </td>
+                        </tr>`
+            );
+          });
+        });
+
+        // 新增/更新學生
+        $("#add-student-form").submit(function (event) {
+          event.preventDefault();
+          const name = $("#name").val();
+          const age = $("#age").val();
+          const grade = $("#grade").val();
+
+          if (editingStudentId) {
+            // 更新學生
+            $.ajax({
+              url: `/students/${editingStudentId}`,
+              type: "PUT",
+              data: { name, age, grade },
+              success: function () {
+                alert("學生資料已更新");
+                location.reload();
+              },
+              error: function () {
+                alert("更新失敗");
+              },
+            });
+          } else {
+            // 新增學生
+            $.post("/students", { name, age, grade }, function (newStudent) {
+              alert("學生已新增");
+              location.reload();
+            }).fail(function () {
+              alert("新增失敗");
+            });
+          }
+        });
+
+        // 編輯學生
+        $(document).on("click", ".edit-btn", function () {
+          editingStudentId = $(this).data("id");
+          const row = $(this).closest("tr");
+          const name = row.find("td:nth-child(1)").text();
+          const age = parseInt(
+            row.find("td:nth-child(2)").text().replace("歲", "")
+          ); // 去掉“歲”
+          const grade = row.find("td:nth-child(3)").text().replace("年級", ""); // 去掉“年級”
+
+          $("#name").val(name);
+          $("#age").val(age);
+          $("#grade").val(grade);
+        });
+
+        // 刪除學生
+        $(document).on("click", ".delete-btn", function () {
+          const id = $(this).data("id");
+          $.ajax({
+            url: `/students/${id}`,
+            type: "DELETE",
+            success: function () {
+              alert("學生已刪除");
+              location.reload();
+            },
+            error: function () {
+              alert("刪除失敗");
+            },
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
